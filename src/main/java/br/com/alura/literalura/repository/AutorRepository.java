@@ -11,4 +11,7 @@ public interface AutorRepository extends JpaRepository<Autor, Long> {
 
     // Consulta derivada para autores vivos em determinado ano
     List<Autor> findByAnoNascimentoLessThanEqualAndAnoFalecimentoGreaterThanEqual(Integer anoNascimento, Integer anoFalecimento);
+
+    // Agora retorna lista para evitar NonUniqueResultException
+    List<Autor> findByNome(String nome);
 }

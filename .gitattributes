@@ -1,2 +1,8 @@
+# Arquivos de texto comuns → LF
+* text=auto eol=lf
+
+# Maven wrapper → LF
 /mvnw text eol=lf
+
+# Arquivos de comando Windows → CRLF
 *.cmd text eol=crlf

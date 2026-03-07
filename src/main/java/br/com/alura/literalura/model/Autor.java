@@ -9,9 +9,12 @@ public class Autor {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(unique = true) // ⚡ garante que não haja nomes duplicados no banco
     private String nome;
+
     private Integer anoNascimento;
     private Integer anoFalecimento;
+
 
     // Construtores
     public Autor() {}

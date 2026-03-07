@@ -1,39 +1,93 @@
 package br.com.alura.literalura.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import br.com.alura.literalura.dto.BookResponse;
+import br.com.alura.literalura.model.Autor;
+import br.com.alura.literalura.model.Livro;
+import br.com.alura.literalura.repository.AutorRepository;
+import br.com.alura.literalura.repository.LivroRepository;
+import org.springframework.stereotype.Service;
+
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.List;
 
-/**
- * Classe responsável por realizar requisições HTTP para obter dados de APIs externas.
- */
+@Service
 public class ConsumoApi {
 
+    private final AutorRepository autorRepository;
+    private final LivroRepository livroRepository;
+    private final ObjectMapper mapper;
+
+    public ConsumoApi(AutorRepository autorRepository, LivroRepository livroRepository) {
+        this.autorRepository = autorRepository;
+        this.livroRepository = livroRepository;
+        this.mapper = new ObjectMapper();
+    }
+
+    /** Faz requisição HTTP e retorna o JSON como String */
     public String obterDados(String endereco) {
-        // Cria o cliente HTTP configurado para seguir redirecionamentos automaticamente
         HttpClient client = HttpClient.newBuilder()
                 .followRedirects(HttpClient.Redirect.ALWAYS)
                 .build();
 
-        // Configura a requisição disfarçando o Java de navegador (User-Agent)
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(endereco))
                 .header("User-Agent", "Mozilla/5.0")
                 .build();
 
-        HttpResponse<String> response = null;
+        try {
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            return response.body();
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException("Erro ao consultar a API: " + e.getMessage(), e);
+        }
+    }
+
+    /** Busca livros na API Gutendex e converte o JSON para BookResponse */
+    public BookResponse buscarLivroGutendex(String titulo) {
+        String url = "https://gutendex.com/books/?search=" + titulo.replace(" ", "+");
+        String json = obterDados(url);
 
         try {
-            // Tenta enviar a requisição e obter a resposta
-            response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        } catch (IOException | InterruptedException e) {
-            // Em caso de erro (falha de rede, etc), lança uma exceção com a mensagem
-            throw new RuntimeException("Erro ao consultar a API: " + e.getMessage());
+            return mapper.readValue(json, BookResponse.class);
+        } catch (IOException e) {
+            throw new RuntimeException("Erro ao processar JSON do Gutendex: " + e.getMessage(), e);
+        }
+    }
+
+    /** Salva livros e autores no banco */
+    public int salvarLivrosGutendex(String titulo) {
+        BookResponse response = buscarLivroGutendex(titulo);
+        int contador = 0;
+
+        for (BookResponse.Book bookDto : response.getResults()) {
+            Autor autor = null;
+
+            if (!bookDto.getAuthors().isEmpty()) {
+                BookResponse.Book.Author aDto = bookDto.getAuthors().get(0);
+                List<Autor> autores = autorRepository.findByNome(aDto.getName());
+                if (autores.isEmpty()) {
+                    autor = new Autor(aDto.getName(), aDto.getBirthYear(), aDto.getDeathYear());
+                    autorRepository.save(autor);
+                } else {
+                    autor = autores.get(0);
+                }
+            }
+
+            Livro livro = new Livro(
+                    bookDto.getTitle(),
+                    bookDto.getLanguage().isEmpty() ? "desconhecido" : bookDto.getLanguage().get(0),
+                    bookDto.getDownloads(),
+                    autor
+            );
+            livroRepository.save(livro);
+            contador++;
         }
 
-        // Retorna o corpo da resposta (o JSON como String)
-        return response.body();
+        return contador; // retorna quantos livros foram salvos
     }
 }

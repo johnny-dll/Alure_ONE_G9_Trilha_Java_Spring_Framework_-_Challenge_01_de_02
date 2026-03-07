@@ -55,6 +55,20 @@ spring.profiles.active=local
 
 > ⚠️ **Dica:** garanta que o banco `literalura_db` esteja criado e acessível localmente antes de iniciar a aplicação.
 
+## 🧹 Limpeza do Banco para Testes
+
+Para garantir que os testes rodem com o banco limpo, você pode executar no PostgreSQL:
+
+TRUNCATE TABLE autor, livro RESTART IDENTITY CASCADE;
+
+Explicação:
+
+- `TRUNCATE TABLE` → apaga todos os registros das tabelas.
+- `RESTART IDENTITY` → reseta os IDs auto-increment.
+- `CASCADE` → remove dependências de foreign keys automaticamente.
+
+> 💡 Use este comando antes de cada teste para evitar duplicações ou conflitos.
+
 ## 🧪 Testes Locais
 
 1. Inicie a aplicação com `./mvnw spring-boot:run`.

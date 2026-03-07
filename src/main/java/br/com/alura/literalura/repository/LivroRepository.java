@@ -11,4 +11,7 @@ public interface LivroRepository extends JpaRepository<Livro, Long> {
 
     // Consulta derivada para buscar livros por idioma
     List<Livro> findByIdioma(String idioma);
+
+    // Novo método para verificar se o livro já existe pelo título
+    Livro findByTitulo(String titulo);
 }
